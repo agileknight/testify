@@ -21,6 +21,8 @@ type Comparison func() (success bool)
 
 type ErrorFormatter interface {
 	FormatNotEqual(expected, actual interface{}) string
+	FormatObjectMustImplementType(interfaceType reflect.Type) string
+	FormatObjectTypeMismatch(expectedType, objectType reflect.Type) string
 }
 
 var errorFormatter ErrorFormatter = new(DefaultErrorFormatter)
@@ -35,6 +37,15 @@ func (m *DefaultErrorFormatter) FormatNotEqual(expected, actual interface{}) str
 	return fmt.Sprintf("Not equal: %#v (expected)\n"+
 			"        != %#v (actual)", expected, actual)
 }
+
+func (m *DefaultErrorFormatter) FormatObjectMustImplementType(interfaceType reflect.Type) string {
+	return fmt.Sprintf("Object must implement %v", interfaceType)
+}
+
+func (m *DefaultErrorFormatter) FormatObjectTypeMismatch(expectedType, objectType reflect.Type) string {
+	return fmt.Sprintf("Object expected to be of type %v, but was %v", expectedType, objectType)
+}
+
 /*
 	Helper functions
 */
@@ -186,7 +197,7 @@ func Implements(t TestingT, interfaceObject interface{}, object interface{}, msg
 	interfaceType := reflect.TypeOf(interfaceObject).Elem()
 
 	if !reflect.TypeOf(object).Implements(interfaceType) {
-		return Fail(t, fmt.Sprintf("Object must implement %v", interfaceType), msgAndArgs...)
+		return Fail(t, errorFormatter.FormatObjectMustImplementType(interfaceType), msgAndArgs...)
 	}
 
 	return true
@@ -197,7 +208,7 @@ func Implements(t TestingT, interfaceObject interface{}, object interface{}, msg
 func IsType(t TestingT, expectedType interface{}, object interface{}, msgAndArgs ...interface{}) bool {
 
 	if !ObjectsAreEqual(reflect.TypeOf(object), reflect.TypeOf(expectedType)) {
-		return Fail(t, fmt.Sprintf("Object expected to be of type %v, but was %v", reflect.TypeOf(expectedType), reflect.TypeOf(object)), msgAndArgs...)
+		return Fail(t, errorFormatter.FormatObjectTypeMismatch(reflect.TypeOf(expectedType), reflect.TypeOf(object)), msgAndArgs...)
 	}
 
 	return true
